@@ -1,5 +1,0 @@
--- Scale up API to loop through dates and gather more data... 
--- we will need to do this to maximize data output and not waste free api calls
--- set api to poll in 30 min intervals
--- change logic to run commands on two day intervals, and post each batch
--- add logic to retreive new key if current key is invalid

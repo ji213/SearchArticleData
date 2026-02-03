@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 DOTENV_FILE_PATH = ".env"
 API_KEY_NAME = "PERIGON_API_KEY"
+DELTA_VALUE = 5
 
 def load_and_verify_key():
     """
@@ -38,20 +39,13 @@ def load_and_verify_key():
         print("   Please ensure the .env file exists and the key name is correct.")
         return None
 
-def generate_perigon_url():
+def generate_perigon_url(datefrom, dateto):
     # Get the API key using your existing function
     api_key = load_and_verify_key()
 
     if api_key:
         print("\nKey is loaded and available for API calls")
 
-    # Calculate dates to use at runtime
-    today = datetime.now().date()
-    seven_days_ago = today - timedelta(days=7)
-
-    # Format as YYYY-MM-DD strings
-    datefrom = seven_days_ago.isoformat()
-    dateto = today.isoformat()
     
     base_url = "https://api.perigon.io/v1/articles/all"
     
@@ -177,28 +171,53 @@ def process_data_into_article_table(data_input):
 
 def get_articles_by_date():
     # Gather article data for specified date range
-    api_url = generate_perigon_url()
 
-    headers = {
-        "Content-Type": "application/json"
-    }
+    # Calculate dates to use at runtime
+    # pass in number of days, make process dynamic
+    # use global variable for now to set delta timeframe
+    today = datetime.now().date()
+    startdate = today - timedelta(days=DELTA_VALUE)
 
-    try:
-        #Make the API request
-        response = requests.get(api_url, headers=headers)
-        response.raise_for_status()
 
-        #
-        data_output= response.json()
+    # Format as YYYY-MM-DD strings
+    # Initialize datefrom/dateto for first run
+    datefrom = startdate
+    datefrom_string = datefrom.isoformat()
+    # set dateto to next date after datefrom
+    dateto = datefrom + timedelta(days=1)
+    dateto_string = dateto.isoformat()
 
-        # Print information about the response for debugging purposes
-        print(f"Success! Found {len(data_output.get('articles', []))} articles.")
+    while datefrom <= today:
+        # start loop
+        api_url = generate_perigon_url(datefrom_string, dateto_string)
 
-        # for the real api, we are going to write data directly to table
-        # call function to act on data_output variable and process it into database
-        process_data_into_article_table(data_output)
-    except Exception as e:
-        print(f"API Request failed... {e}")
+        headers = {
+            "Content-Type": "application/json"
+        }
+
+        try:
+            #Make the API request
+            response = requests.get(api_url, headers=headers)
+            response.raise_for_status()
+
+            #
+            data_output= response.json()
+
+            # Print information about the response for debugging purposes
+            print(f"Success! Found {len(data_output.get('articles', []))} articles.")
+
+            # for the real api, we are going to write data directly to table
+            # call function to act on data_output variable and process it into database
+            process_data_into_article_table(data_output)
+
+        except Exception as e:
+            print(f"API Request failed... {e}")
+
+        # increment dates and update strings
+        datefrom += timedelta(days=1)
+        dateto += timedelta(days=1)
+        datefrom_string = datefrom.isoformat()
+        dateto_string = dateto.isoformat()
 
 
 def test_api_call ():

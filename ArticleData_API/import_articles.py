@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 # KEY CONFIGURATION
 DOTENV_FILE_PATH = ".env"
 API_KEY_NAME = "PERIGON_API_KEY"
-DELTA_VALUE = 5
+DELTA_VALUE = 10
 
 def load_and_verify_key():
     """
@@ -94,9 +94,16 @@ def process_data_into_article_table(data_input):
         print(f"Connected to database successfully...")
 
         # SQL Merge statement (Upsert logic)
+        # Updated logic to filter out videos if possible
         sql_query = """
         MERGE INTO dbo.tbl_articles AS target
-        USING (SELECT ? AS URL) AS source
+        USING (
+            SELECT ? AS URL
+            WHERE   ? NOT LIKE '%/video/%'
+            AND     ? NOT LIKE '%/v/%'
+            AND     ? NOT LIKE '%youtube.com/%'
+            AND     ? NOT LIKE '%vimeo.com/%'
+        ) AS source
         ON (target.URL = source.URL)
         WHEN MATCHED THEN
             UPDATE SET 
@@ -126,7 +133,7 @@ def process_data_into_article_table(data_input):
             sentiment_pos = art.get('sentiment', {}).get('positive')
 
             params = (
-                safe_url, 
+                safe_url, safe_url, safe_url, safe_url, safe_url,
                 title, description, image_url, domain, country, language, medium, pub_date, score, sentiment_pos,
                 title, description, safe_url, image_url, domain, country, language, medium, pub_date, score, sentiment_pos
             )

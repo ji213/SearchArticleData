@@ -9,11 +9,16 @@ def get_article_to_summarize():
     connection_string = get_db_connection_string()
     article_data = None
 
+    # this variable is for debugging purposes only, we grab unsummarized article by id when debugging errors
+    # comma tells compiler that the value inside of the parenthesis is a tuple, best for multiple parameters
+    # cursor.execute("{CALL dbo.usp_GetUnsummarizedArticle_byID (?)}", (target_id,))
+    # target_id = 563
+
     try:
         with pyodbc.connect(connection_string) as conn:
             cursor = conn.cursor()
             print("Querying Database...")
-            cursor.execute("{CALL dbo.usp_GetUnsummarizedArticle_atRandom}")
+            cursor.execute("{CALL dbo.usp_GetUnsummarizedArticle}")
             row = cursor.fetchone()
 
             if row:
@@ -55,8 +60,8 @@ def get_article_text (url):
             page.goto(url, wait_until="domcontentloaded", timeout=60000)
 
             #SCREENSHOT DEBUG
-            page.screenshot(path="debug.png")
-            print("📸 Debug screenshot saved as debug_view.png")
+            ## page.screenshot(path="debug.png")
+            ## print("📸 Debug screenshot saved as debug_view.png")
 
             # wait for 3 seconds for any final JS/popups to clear
             page.wait_for_timeout(3000)

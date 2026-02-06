@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 TestScripts/
 notes.txt
+debug_dump.html

@@ -100,6 +100,7 @@ def process_data_into_article_table(data_input):
         USING (
             SELECT ? AS URL
             WHERE   ? NOT LIKE '%/video/%'
+            AND     ? NOT LIKE '%/videos/%'
             AND     ? NOT LIKE '%/v/%'
             AND     ? NOT LIKE '%youtube.com/%'
             AND     ? NOT LIKE '%vimeo.com/%'
@@ -133,7 +134,7 @@ def process_data_into_article_table(data_input):
             sentiment_pos = art.get('sentiment', {}).get('positive')
 
             params = (
-                safe_url, safe_url, safe_url, safe_url, safe_url,
+                safe_url, safe_url, safe_url, safe_url, safe_url, safe_url,
                 title, description, image_url, domain, country, language, medium, pub_date, score, sentiment_pos,
                 title, description, safe_url, image_url, domain, country, language, medium, pub_date, score, sentiment_pos
             )

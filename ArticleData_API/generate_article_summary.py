@@ -2,6 +2,17 @@ from db_config import get_db_connection_string
 import trafilatura
 from playwright.sync_api import sync_playwright
 import pyodbc
+import nltk
+from nltk.tokenize import sent_tokenize, word_tokenize
+from nltk.corpus import stopwords
+from collections import Counter
+import re
+
+SUMMARYLENGTH_SENTENCES = 4
+
+# One-time download of necessary data
+nltk.download('punkt')
+nltk.download('stopwords')
 
 def get_article_to_summarize():
     # this function will return the key variables around an article to summarize
@@ -18,7 +29,7 @@ def get_article_to_summarize():
         with pyodbc.connect(connection_string) as conn:
             cursor = conn.cursor()
             print("Querying Database...")
-            cursor.execute("{CALL dbo.usp_GetUnsummarizedArticle}")
+            cursor.execute("{CALL dbo.usp_GetUnsummarizedArticle_atRandom}")
             row = cursor.fetchone()
 
             if row:
@@ -81,6 +92,83 @@ def get_article_text (url):
         print(f"❌ Scraping Error: {e}")
         return None
 
+def get_article_summary(text, title, summarylength):
+    # summarize article text
+    # passes in summary length in sentences
+    print('\nSummarizing article...')
+
+    # Split text into sentences
+    sentences = sent_tokenize(text)
+
+    print(f'Found {len(sentences)} sentences...')
+
+    if len(sentences) <= summarylength:
+        # if the text is already less than the length of summary we are looking for, return
+        return text
+
+    # Build Word Frequency Map.... CLEAN
+    # hash table of stop words
+    stop_words = set(stopwords.words('english'))
+
+    print(f'Retreived {len(stop_words)} stop words')
+
+    # strip words from text... in lowercase
+    words = word_tokenize(text.lower())
+
+    # track frequency of words
+    # only count alphanumeric words that arent in our stop words list
+    freq_table = Counter(word for word in words if word.isalnum() and word not in stop_words)
+
+    # Score Sentences
+    sentence_scores = {}
+
+    for i, sentence in enumerate(sentences):
+        sentence_word_count = 0
+
+        for word in word_tokenize(sentence.lower()):
+            if word in freq_table:
+
+                sentence_word_count += 1
+
+                if sentence not in sentence_scores:
+                    sentence_scores[sentence] = freq_table[word]
+                else:
+                    sentence_scores[sentence] += freq_table[word]
+
+        # Normalizing score by sentence length
+        # Doing this to make sure we dont allow long sentences in summary by default
+
+        if sentence in sentence_scores:
+            if sentence_word_count > 0:
+                sentence_scores[sentence] = sentence_scores[sentence] / sentence_word_count
+
+        # Edmunson Cues
+
+        # Position Bonus: Boost the first 3 sentences
+        if i < 3:
+            sentence_scores[sentence] *= 2.0
+
+        # Title Bonus: Boost sentences that share words with the title
+        title_words = [w.lower() for w in word_tokenize(title) if w.isalnum()]
+
+        # Loop through each word in title
+        for tw in title_words:
+            # is the title word in the sentence?
+            if tw in sentence.lower():
+                sentence_scores[sentence] += 5
+
+    # Pick top Sentences
+    import heapq
+    summary_sentences = heapq.nlargest(summarylength, sentence_scores, key=sentence_scores.get)
+
+    # Sort back into original order so the summary flows naturally
+
+    summary_sentences.sort(key=lambda s: sentences.index(s))
+
+    return " ".join(summary_sentences)
+
+
+
 
 
 def main():
@@ -121,8 +209,20 @@ def main():
             print("-" * 40)
         else:
             print("⚠️ Scraping returned no text.")
+
+        # initialize all missing variables required for the summary generation
+        article_title = article['title']
+
+        # Get article summary
+        article_summary = get_article_summary(article_text, article_title, SUMMARYLENGTH_SENTENCES)
+        print("\n--- Article Summary ---")
+        print(article_summary)
+        print("------------------")
+
     else:
         print("\n No data available to display...")
+
+    
 
 if __name__ == "__main__":
     main()

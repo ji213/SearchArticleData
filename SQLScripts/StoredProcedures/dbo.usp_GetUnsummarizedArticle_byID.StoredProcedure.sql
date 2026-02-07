@@ -1,5 +1,5 @@
 CREATE OR ALTER PROCEDURE dbo.usp_GetUnsummarizedArticle_byID (
-    @ArticleID INT = NULL  -- Added optional input parameter
+    @ArticleID INT = NULL  
 )
 AS
 BEGIN

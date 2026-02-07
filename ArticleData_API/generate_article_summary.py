@@ -29,7 +29,7 @@ def get_article_to_summarize():
         with pyodbc.connect(connection_string) as conn:
             cursor = conn.cursor()
             print("Querying Database...")
-            cursor.execute("{CALL dbo.usp_GetUnsummarizedArticle_atRandom}")
+            cursor.execute("{CALL dbo.usp_GetUnsummarizedArticle}")
             row = cursor.fetchone()
 
             if row:
@@ -167,6 +167,30 @@ def get_article_summary(text, title, summarylength):
 
     return " ".join(summary_sentences)
 
+def update_article_summary(article_id, article_summary):
+    # Update summary in database table
+
+    # init variables
+    connection_string = get_db_connection_string()
+    sql_call = "{CALL dbo.usp_UpdateArticleSummary_byID (?, ?)}"
+    parameters = (article_id, article_summary)
+
+    try:
+        with pyodbc.connect(connection_string) as conn:
+            cursor = conn.cursor()
+            print("Querying Database...")
+
+            # call process to update generatedsummary in db table
+            cursor.execute(sql_call, parameters)
+            # commit date
+            conn.commit()
+            print(f"✅ Summary saved for ID: {article_id}")
+
+    except Exception as e:
+        print(f"❌ Posting Error: {e}")
+
+
+
 
 
 
@@ -178,49 +202,33 @@ def main():
     print("       Generating article summary...")
     print("="*40)
 
-    # Fecth article data that doesnt have a generated summary
-    article = get_article_to_summarize()
+    count = 0
+    while True:
+        # Fecth article data that doesnt have a generated summary
+        article = get_article_to_summarize()
 
-   
-    if article:
-        # Log to screen if article exists
-        print("\n ✅ DATA RETRIEVED SUCCESSFULLY:")
-        print("-" * 40)
-
-        # set padding variable for output formatting later
-        # dynamically calculating this in case we add new columns for later
-        ## padding = max(len(key) for key in article.keys()) + 2
-        ## 
-        ## for key, value in article.items():
-        ##     print(f"{key:<{padding}}: {value}")
+        if not article:
+            print(f"\n✅ All caught up! Total articles summarized: {count}")
+            break
 
         print("-" * 40)
         print("\n Ready for next steps...")
-
+        # initialize all missing variables required for the summary generation
+        article_title = article['title']
         # Scrape article text
         print("\n📝 SCRAPING CONTENT...")
         article_text = get_article_text(article['url'])
-
+        
         if article_text:
-            print(f"✅ Successfully scraped {len(article_text)} characters.")
-            print("-" * 40)
-            
-            ## print(test_content[:2000] + "...")
-            print("-" * 40)
+            # Get article summary
+            article_summary = get_article_summary(article_text, article_title, SUMMARYLENGTH_SENTENCES)
+            # Update summary in db table
+            update_article_summary(article['id'], article_summary)   
+            count += 1
         else:
-            print("⚠️ Scraping returned no text.")
-
-        # initialize all missing variables required for the summary generation
-        article_title = article['title']
-
-        # Get article summary
-        article_summary = get_article_summary(article_text, article_title, SUMMARYLENGTH_SENTENCES)
-        print("\n--- Article Summary ---")
-        print(article_summary)
-        print("------------------")
-
-    else:
-        print("\n No data available to display...")
+            # Important: If scraping fails, we need to mark it so it doesn't loop forever
+            # For now, we'll just print a warning.
+            print(f"⚠️ Skipping ID {article['id']} - No text could be scraped.")       
 
     
 

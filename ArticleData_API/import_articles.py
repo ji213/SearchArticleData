@@ -6,6 +6,7 @@ from urllib.parse import urlencode
 from db_config import get_db_connection_string
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+import generate_article_summary as summarizer
 
 # KEY CONFIGURATION
 DOTENV_FILE_PATH = ".env"
@@ -254,3 +255,6 @@ if __name__ == "__main__":
     ## we will eventually set this to poll every 30 minutes, and run a live container
 
     get_articles_by_date()
+
+    print('Summarizing data...')
+    summarizer.main()

@@ -85,44 +85,44 @@ def get_article_text (url):
 
 def main():
     # main logic
-    # used for testing each benchmark
 
     print("="*40)
-    print("       ARTICLE FETCH TEST")
+    print("       Generating article summary...")
     print("="*40)
 
     # Fecth article data that doesnt have a generated summary
     article = get_article_to_summarize()
 
-    # Display data, if it exists
+   
     if article:
+        # Log to screen if article exists
         print("\n ✅ DATA RETRIEVED SUCCESSFULLY:")
         print("-" * 40)
 
         # set padding variable for output formatting later
         # dynamically calculating this in case we add new columns for later
-        padding = max(len(key) for key in article.keys()) + 2
-        
-        for key, value in article.items():
-            print(f"{key:<{padding}}: {value}")
+        ## padding = max(len(key) for key in article.keys()) + 2
+        ## 
+        ## for key, value in article.items():
+        ##     print(f"{key:<{padding}}: {value}")
 
         print("-" * 40)
         print("\n Ready for next steps...")
 
-        # Test scraping logic
-        print("\n📝 TESTING... SCRAPING CONTENT...")
-        test_content = get_article_text(article['url'])
+        # Scrape article text
+        print("\n📝 SCRAPING CONTENT...")
+        article_text = get_article_text(article['url'])
 
-        if test_content:
-            print(f"✅ Successfully scraped {len(test_content)} characters.")
+        if article_text:
+            print(f"✅ Successfully scraped {len(article_text)} characters.")
             print("-" * 40)
-            # Show just the first 300 characters to verify it's real text
-            print(test_content[:2000] + "...")
+            
+            ## print(test_content[:2000] + "...")
             print("-" * 40)
         else:
-            print("⚠️ Trafilatura returned no text.")
+            print("⚠️ Scraping returned no text.")
     else:
-        print("\n No data available to display")
+        print("\n No data available to display...")
 
 if __name__ == "__main__":
     main()

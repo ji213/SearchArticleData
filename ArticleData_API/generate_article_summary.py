@@ -10,9 +10,19 @@ import re
 
 SUMMARYLENGTH_SENTENCES = 4
 
-# One-time download of necessary data
-nltk.download('punkt')
-nltk.download('stopwords')
+# One-time download of necessary data wrapped in safety logic
+try:
+    # We attempt to look for the data first
+    nltk.data.find('tokenizers/punkt')
+    nltk.data.find('corpora/stopwords')
+    print("✅ NLTK resources already present.")
+except LookupError:
+    # If not found, we download them
+    print("📦 NLTK resources missing. Downloading now...")
+    nltk.download('punkt')
+    nltk.download('stopwords')
+except Exception as e:
+    print(f"⚠️ Unexpected NLTK error: {e}")
 
 def get_article_to_summarize():
     # this function will return the key variables around an article to summarize
@@ -68,26 +78,26 @@ def get_article_text (url):
             #Navigate and wait for the page to stop loading data
             # wait_until="dotcomloaded" -  waits for the basic HTML has been completely downloaded and parsed into the DOM
             print(f"🌐 Navigating to: {url}")
+
             page.goto(url, wait_until="domcontentloaded", timeout=60000)
 
             #SCREENSHOT DEBUG
             ## page.screenshot(path="debug.png")
             ## print("📸 Debug screenshot saved as debug_view.png")
 
+
             # wait for 3 seconds for any final JS/popups to clear
             page.wait_for_timeout(3000)
 
             #Grab the FULLY RENDERED HTML
             rendered_html = page.content()
-            browser.close()
 
             # Use Trafilatura to extract clean text from the rendered HTML
             article_text = trafilatura.extract(rendered_html, favor_precision=True)
-
             
-
             # return article text, return none if article text doesnt exist
             return article_text.strip() if article_text else None
+
     except Exception as e:
         print(f"❌ Scraping Error: {e}")
         return None
@@ -202,6 +212,8 @@ def main():
     print("       Generating article summary...")
     print("="*40)
 
+    failure_message = 'ERROR: No Summary Generated'
+
     count = 0
     while True:
         # Fecth article data that doesnt have a generated summary
@@ -228,7 +240,11 @@ def main():
         else:
             # Important: If scraping fails, we need to mark it so it doesn't loop forever
             # For now, we'll just print a warning.
-            print(f"⚠️ Skipping ID {article['id']} - No text could be scraped.")       
+            update_article_summary(article['id'], failure_message)
+
+            print(f"⚠️ FAILURE: Skipping ID {article['id']} - No text could be scraped.")    
+
+
 
     
 

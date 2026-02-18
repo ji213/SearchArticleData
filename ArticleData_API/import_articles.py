@@ -11,7 +11,7 @@ import generate_article_summary as summarizer
 # KEY CONFIGURATION
 DOTENV_FILE_PATH = ".env"
 API_KEY_NAME = "PERIGON_API_KEY"
-DELTA_VALUE = 10
+DELTA_VALUE = 3
 
 def load_and_verify_key():
     """

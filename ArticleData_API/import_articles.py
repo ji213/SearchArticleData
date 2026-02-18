@@ -3,14 +3,15 @@ import requests
 import json
 import pyodbc
 from urllib.parse import urlencode
+from db_config import get_db_connection_string
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+import generate_article_summary as summarizer
 
 # KEY CONFIGURATION
-
 DOTENV_FILE_PATH = ".env"
 API_KEY_NAME = "PERIGON_API_KEY"
-DELTA_VALUE = 5
+DELTA_VALUE = 3
 
 def load_and_verify_key():
     """
@@ -68,33 +69,6 @@ def generate_perigon_url(datefrom, dateto):
     
     return full_url
 
-def get_db_connection_string():
-    """
-    Loads database credentials from .env and returns a 
-    formatted pyodbc connection string.
-    """
-    # Load the .env file
-    load_dotenv(DOTENV_FILE_PATH)
-
-    # Retrieve variables
-    driver = os.getenv("DRIVER")
-    server = os.getenv("SERVER_NAME")
-    database = os.getenv("DATABASE_NAME")
-
-    # Validation: Ensure all required fields exist
-    if not all([driver, server, database]):
-        missing = [k for k, v in {"DRIVER": driver, "SERVER": server, "DATABASE": database}.items() if not v]
-        raise EnvironmentError(f"Missing required environment variables: {', '.join(missing)}")
-
-    # Construct the string
-    connection_string = (
-        f"DRIVER={driver};"
-        f"SERVER={server};"
-        f"DATABASE={database};"
-        f"Trusted_Connection=yes;"
-    )
-    
-    return connection_string
 
 def process_data_into_article_table(data_input):
     # take data input and process ingested articles into ssms table
@@ -121,9 +95,17 @@ def process_data_into_article_table(data_input):
         print(f"Connected to database successfully...")
 
         # SQL Merge statement (Upsert logic)
+        # Updated logic to filter out videos if possible
         sql_query = """
         MERGE INTO dbo.tbl_articles AS target
-        USING (SELECT ? AS URL) AS source
+        USING (
+            SELECT ? AS URL
+            WHERE   ? NOT LIKE '%/video/%'
+            AND     ? NOT LIKE '%/videos/%'
+            AND     ? NOT LIKE '%/v/%'
+            AND     ? NOT LIKE '%youtube.com/%'
+            AND     ? NOT LIKE '%vimeo.com/%'
+        ) AS source
         ON (target.URL = source.URL)
         WHEN MATCHED THEN
             UPDATE SET 
@@ -153,7 +135,7 @@ def process_data_into_article_table(data_input):
             sentiment_pos = art.get('sentiment', {}).get('positive')
 
             params = (
-                safe_url, 
+                safe_url, safe_url, safe_url, safe_url, safe_url, safe_url,
                 title, description, image_url, domain, country, language, medium, pub_date, score, sentiment_pos,
                 title, description, safe_url, image_url, domain, country, language, medium, pub_date, score, sentiment_pos
             )
@@ -273,3 +255,6 @@ if __name__ == "__main__":
     ## we will eventually set this to poll every 30 minutes, and run a live container
 
     get_articles_by_date()
+
+    print('Summarizing data...')
+    summarizer.main()

@@ -23,7 +23,8 @@ BEGIN
         SentimentPositive DECIMAL(10, 8),
         
         -- Audit column
-        DateImported DATETIME DEFAULT GETDATE()
+        DateImported DATETIME DEFAULT GETDATE(),
+        GeneratedSummary NVARCHAR(MAX) NULL
     );
     PRINT 'Table [dbo].[tbl_articles] created successfully.';
 END
